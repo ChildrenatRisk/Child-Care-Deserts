@@ -1,0 +1,902 @@
+---
+title: "CCD2022data"
+author: "Christine Thomas"
+date: "2023-02-28"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(janitor)
+library(reshape2)
+library(here)
+library(tidycensus)
+library(readxl)
+library(stringr)
+library(dbplyr)
+library(pdftools)
+```
+
+### Overview
+
+Child Care Desert Map Project Manual The Center for American Progress
+coined the term child care desert, which refers to a census tract with
+at least 50 children, with either zero child care providers, or a 3:1
+(or greater) ratio of children under 5 to child care capacity.
+
+Children at Risk builds upon this idea with a child care desert
+definition that uses state-specific indicators. These additional data
+shed light on the actual availability and affordability of high quality
+child care.
+
+>Types of deserts
+1. Child care deserts
++ the demand for child care is three times greater or
+more than the total licensed capacity of child care providers in the
+area
++ Number of all children with at least one working parent/all childcare capacity
+2. Subsidized child care deserts
++ the demand for subsidized childcare is three times greater or more than the total number of subsidized seats offered by child care providers in the area
++ Number of all children with at least one working parent living 200% the poverty line/subsidy childcare capacity
+3.Texas Rising Star
++(TRS) deserts: the demand for subsidized child care is three times greater or more than the supply of Texas Rising Star-certified childcare
++Number of all children with at least one working parent living 200% the poverty line/childcare capacity in all TRS childcare locations
+4.TRS Level 4 deserts
++ the demand for subsidized child care is three times greater or more than the supply of Texas Rising Star Level 4-certified child care.
++Number of all children with at least one working parent living 200% the poverty line/childcare capacity in level 4 TRS childcare locations
+
+
+For child care deserts, Children at Risk started
+by calculating child care demand by looking at zip code tract areas
+(ZCTAs) with at least 30 children ages 0-5 with working parents. If a
+ZCTA met that threshold, Children at Risk would look at the capacity of
+licensed providers and the estimated number of children.
+
+For subsidized child care deserts, they calculated subsidized child care
+demand by looking at ZCTAs with at least 30 children ages 0-5 with
+working parents living below 200% of the federal poverty line. If a ZCTA
+met that threshold, Children at Risk would look at the capacity of
+licensed providers accepting subsidies, and the estimated number of
+children who could use those seats.
+
+If a ZCTA did not meet the 30 child threshold, it was marked "Not a
+Desert." So a severe child care desert might not be a subsidized child
+care desert because it did not meet the 30 child minimum for a
+subsidized desert. And some ZCTAs might not appear at all, failing to
+meet the 30 child minimum in both cases.
+
+####> Data Overview
+Data can be requested as early as October.
+*TWC subsidy request
++This can be completed through the online portal and by communication with our contact Gwen)
+
+
+```{r}
+#Created this account, but issues with login
+info@childrenatrisk.org
+F0rChildren!2023
+```
+Board Targets
+*File: Board Targets 2022 
+
++Data downloaded from TWC website:https://www.twc.texas.gov/2022-twc-commission-meeting-agendas-materials-minutes
+
++board data can be found in TWC commission meeting materials made public on their site: 
+
+++Go to TWC home page 
+
+++Go to “events” 
+
+++Go to commission meetings, materials, minutes 
+
+++Then navigate from there. The one we used last year is from 10/6/20. They are released about the same time every year and Adam Leonard presents. 
+
+++Example of meeting minutes can be viewed in the following pdf: commission_meeting_material_10.19.21_item9_bcy22_cc_acc.pdf
+
++Excel file includes variables: Board # and BCY Target (These are daily childcare use targets)
+
+*TWC Board Names
+
++File: county_to_TWCboard 
+
++Data dictionary for TWC.Board.Names and number to connect to county and FIPS code 
+
++Unclear where this data came from.   
+
+*Texas Child Care License information
+
++Data downloaded from dfps website:https://www.dfps.state.tx.us/Child_Care/Search_Texas_Child_Care/ppFacilitySearchDayCare.asp
++Do not click or filter any criteria as we are looking at all available 
+*The CACFP data source is Texas Department of Agriculture which we match to the child care data. Historically we have done this by matching by name, then by address, and a final manual qc – but going forward I think we will geocode and match by latitude and longitude for better accuracy. 
+https://data.texas.gov/dataset/Child-and-Adult-Care-Food-Programs-CACFP-Centers-S/shjz-5r49
+
+
+##ACS Data
+Extract from ACS summary file data profile variables from TX Census Tracts
+```{r}
+#This example will use R to download American Community Survey summary
+#file tables using the `tidycensus` package. The goal of this example is to illustrate how to download data from the Census API using R, how to create basic descriptive maps of attributes and how to construct a change map between two time periods Get a Census developer API Key Obtain one at <http://api.census.gov/data/key_signup.html>
+
+#Save your API key to your working directory use `census_api_key(key =  "yourkeyhere", install = T)`
+
+#only one time to install your key for use in `tidycensus`
+
+#Call ACS most recent 1 yr agg data codebook(and access)
+v21 <- load_variables(2021, "acs5", cache = TRUE)
+
+
+#The data profile tables are very useful because they contain lots of pre-calculated variables. get_acs for track data, get_decennial for block data
+```
+
+
+>Variables Used
+Under 6 years: Living with two parents: Both parents in labor force
+Under 6 years: Living with one parent: Living with father: In labor
+force
+Under 6 years: Living with one parent: Living with mother: In
+labor force
+B17024_011
+Estimate!!Total:!!Under 6 years:!!2.00 to 2.99
+AGE BY RATIO OF INCOME TO POVERTY LEVEL IN THE PAST 12 MONTHS
+B17024_012
+Estimate!!Total:!!Under 6 years:!!3.00 to 3.99
+AGE BY RATIO OF INCOME TO POVERTY LEVEL IN THE PAST 12 MONTHS
+B17024_013
+Estimate!!Total:!!Under 6 years:!!4.00 to 4.99
+AGE BY RATIO OF INCOME TO POVERTY LEVEL IN THE PAST 12 MONTHS
+B17024_014
+Estimate!!Total:!!Under 6 years:!!5.00 and over
+AGE BY RATIO OF INCOME TO POVERTY LEVEL IN THE PAST 12 MONTHS
+Child Care Desert Map Project Manual /Data file breakdown 
+
+ 
+
+
+
+```{r cars}
+knitr::opts_chunk$set(echo = FALSE)
+
+#Call ACS most recent 5 yr agg data codebook(and access) change year
+v20 <- load_variables(2020, "acs5", cache = TRUE)
+View(v20)
+
+Texas_20_5yr <-  get_acs(geography = "zcta",
+                         variables = c(und6_2par_work = "B23008_004", 
+                                       und6_fath_work = "B23008_010", 
+                                       und6_moth_work = "B23008_013", 
+                                       Under_6 = "B17024_002",  
+                                       und6belowpov= "B17020_003",
+                                      und6_2to2.99 = "B17024_011",
+                                       und6_3to3.99 = "B17024_012", 
+                                       und6_4to4.99 = "B17024_013", 
+                                       und6_5plus = "B17024_014"),
+                         #state= "TX",
+                         year = 2021,
+                       #geometry = TRUE,
+                         output = "wide",
+                         survey = "acs5")
+#---------------------------------------------------------------------------- NEED TO REDO where does 0.849822 actually come from????
+work_pov_zcta <- Texas_20_5yr %>% 
+  mutate(ZCTA = substring(NAME, 6),
+         ZCTA = as.numeric(ZCTA)) %>%
+  filter(ZCTA >= 75001 & ZCTA <= 79942) %>% 
+  select(ZCTA, und6_2par_workE, und6_fath_workE, und6_moth_workE, Under_6E, 
+         und6_2to2.99E,und6_3to3.99E,und6_4to4.99E,und6_5plusE) %>% 
+  mutate(workpar = und6_2par_workE + und6_fath_workE + und6_moth_workE,
+         lowinc_share = ifelse(Under_6E>0, ((und6_2to2.99E + und6_3to3.99E + und6_4to4.99E + und6_5plusE)/Under_6E)*100, 0),
+         #Apply reduction for working parents, calculated from state level IPUMS 
+         #Use 2011-2015 ratio
+         lowinc_share = ifelse(lowinc_share>0, lowinc_share * 0.849822, 0),
+         workpar_pov = workpar * (lowinc_share/100)) %>% 
+  select(ZCTA, lowinc_share, workpar, workpar_pov) 
+#---------------------------------------------------------------------------- 
+
+
+
+###Pulling the county level for descriptive stats:
+Texas_20_5yr.2 <-  get_acs(geography = "county",
+                         variables = c(und6_2par_work = "B23008_004", 
+                                       und6_fath_work = "B23008_010", 
+                                       und6_moth_work = "B23008_013", 
+                                       Under_6 = "B17024_002",  
+                                       und6belowpov= "B17020_003",
+                                      und6_2to2.99 = "B17024_011",
+                                       und6_3to3.99 = "B17024_012", 
+                                       und6_4to4.99 = "B17024_013", 
+                                       und6_5plus = "B17024_014"),
+                         year = 2021,
+                         state = "TX",
+                         #     geometry = TRUE,
+                         output = "wide",
+                         survey = "acs5") 
+
+###Upload file 
+Texas_20_5yr.2 <- Texas_20_5yr.2 %>% 
+  mutate(FIPS.Code = as.numeric(GEOID))
+
+
+###Add Board areas if not already in dataset and calculate subsidy TRS dummies
+county_to_twc <- read_csv(here("Childcare", "county_to_TWCboard.csv"))
+Texas_20_5yr.2 <- left_join(Texas_20_5yr.2, county_to_twc, by = "FIPS.Code")
+
+Texas_20_5yr.2 <- Texas_20_5yr.2 %>%  
+  group_by(TWC.Board.Number) %>% 
+  summarise(und6_2par_workE = sum(und6_2par_workE), 
+            und6_fath_workE = sum(und6_fath_workE), 
+            und6_moth_workE = sum(und6_moth_workE), 
+            Under_6E = sum(Under_6E),  
+            und6_2to2.99E = sum(und6_2to2.99E), 
+            und6_3to3.99E = sum(und6_3to3.99E),
+            und6_4to4.99E = sum(und6_4to4.99E), 
+            und6_5plusE = sum(und6_5plusE))
+
+
+work_pov_zcta.2 <- Texas_20_5yr.2 %>% 
+  #select(TWC.Board.Number, und6_2par_workE, und6_fath_workE, und6_moth_workE, Under_6E,und6_2to2.99E + und6_3to3.99E + und6_4to4.99E + und6_5plusE) %>% 
+  mutate(workpar = und6_2par_workE + und6_fath_workE + und6_moth_workE,
+         lowinc_share = ifelse(Under_6E>0, ((und6_2to2.99E + und6_3to3.99E + und6_4to4.99E + und6_5plusE)/Under_6E)*100, 0),
+         #Apply reduction for working parents, calculated from state level IPUMS 
+         #Use 2011-2015 ratio
+         lowinc_share = ifelse(lowinc_share>0, lowinc_share * 0.849822, 0),
+         workpar_pov = workpar * (lowinc_share/100)) %>% 
+  select(TWC.Board.Number, lowinc_share, workpar, workpar_pov) %>% 
+  reshape::rename(c('GEOID' = 'ZCTA'))
+
+workpar_sum <- work_pov_zcta.2 %>% 
+  summarise(workpar_pov = sum(workpar_pov),
+            workpar = sum(workpar))
+
+
+```
+```{r}
+
+STILL EDITING
+#Number of children (0-5) with working parents in Texas (1,412,546 last year)
+workingpar
+
+#Number of low income children (0-5) with working parents in Texas (543,137 last year)
+workpar_sum <- work_pov_zcta.2 %>% 
+  summarise(workpar_pov = sum(workpar_pov),
+            workpar = sum(workpar))
+```
+
+
+
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE)
+
+#Compiling multiple files: data_clean_zip_new, twc_reduction_ratio, data_clean_zip
+# data_clean_zip combines TWC and DFPS provider data and creates "providers for Jeff" which is the data file that goes to January Advisors
+# twc_reduction_ratio uses that cleaned provider file and merges TWC board targets, calculates reduction ratio
+# data_clean_zip_new does everything else with the cleaned provider data to calculate deserts at zip level
+
+library(tidyverse)
+library(janitor)
+library(reshape2)
+library(here)
+library(tidycensus)
+library(readxl)
+library(pdftools)
+library(ggplot2)
+
+#NOtE: download DFPS dataset from here: https://www.dfps.state.tx.us/Child_Care/Search_Texas_Child_Care/ppFacilitySearchResults.asp
+
+###### Provider clean #######
+url<- c("https://www.twc.texas.gov/files/twc/commission_meeting_materials_09.13.22_item16_bcy23_cc_targets.pdf")
+raw_text <- map(url,pdf_text)
+
+clean_table1<-function(raw) {
+  #split the single pages 
+  raw <-map(raw, ~ str_split(.x, "\\n") %>% unlist())
+  #concatente the split pages
+  raw <- reduce(raw, c)
+  
+  #specify the start and end of the table data
+  table_start <- stringr::str_which(tolower(raw),"Board Name")
+  table_end <- stringr::str_which(tolower(raw), "Sum of Boards")
+  table_end <- table_end[min(which(table_end >table_start))]
+  
+  #Build the table and remove special characters
+  table <- raw[(table_start):(table_end)]
+table <- str_replace_all(table,"\\s{2,}", "|")
+text_con <-textConnection(table)
+data_table <-read.csv(text_con, sep = "|")
+
+#Create a list of column names
+colnames(data_table)<- c("Board Name","#","CY23 Base Allocation","4% Quality Allocation", "Amount Available to Operate the Subsidized CC Program", "Presumed Semi-Fixed Admin/Ops Set Aside","Supplemental Distribution","Available for Direct Care (DC) & Variable Admin/Ops","Variable
+Admin/Ops per Unit","Estimated Avg Provider Reimbursement Rate", "Presumed PSOC","System Cost Per Unit", "BCY23 Target")
+data_table
+
+}
+results <- map_df(raw_text,clean_table1) #I am get stuck here and I don't know why-CT
+head(results)
+#___________________________
+board.targets <- read_xlsx(here("Childcare","Board Targets 2023.xlsx")) #Extract daily targets
+
+subsidy_enrollment <- read_xlsx(here("Childcare", "Children_at_Risk_ORR_S024988-031723_-_Sep22.xlsx")) 
+
+providers <- read_csv(here("Childcare", "ChildCareSearchResults.csv")) %>% 
+  filter(Type!="Listed Family Home" & Type!="Small Employer Based Child Care")
+
+#add subsidy and trs info:
+providers_detail <- read_xlsx(here("Childcare", "Children_at_Risk_ORR_S024988-031723_-_Sep22.xlsx")) %>% 
+  reshape::rename(c(OPERATION_ID = "Operation #",
+                    FACILITY_ID = "Facility ID")) %>% 
+  mutate(DailyAvg_sub = ifelse(SUBSIDY == "Subsidy", `Avg Children per Day`, 0),
+         subsidy = ifelse(SUBSIDY == "Subsidy", 1, 0),
+         trs_2 = ifelse(`DESIGNATION` == "TRS 2 Star", 1, 0),
+         trs_3 = ifelse(`DESIGNATION`=="TRS 3 Star", 1, 0),
+         trs_4 = ifelse(`DESIGNATION`=="TRS 4 Star", 1, 0),
+         trs_all = ifelse(`DESIGNATION`== "Regular", 0, 1),
+         Subsidy = ifelse(SUBSIDY=="Subsidy", 1, 0))  %>% 
+  filter(PROVIDER_TYPE!="Relative Care - Listed home" & PROVIDER_TYPE!="Small Employer Based Child Care") %>% 
+  select("Operation #", "DailyAvg_sub", "subsidy", "trs_2", "trs_3", "trs_4", "trs_all", "Subsidy")
+
+providers <- left_join(providers, providers_detail, by = "Operation #")
+
+#Type!="Licensed Center - Before/After School Program" & Type!="Licensed Center -`Average Children Per Day` School Age Program"
+tabyl(providers, Type)
+
+write_csv(providers, here("Childcare", "providers.to.geocode.csv"))
+######Stop here - go to geocode script and geocode cacfp and all accredidations except for NAC providers [This process can be done in R]
+
+#read in updated provider data
+providers <- read_csv(here("Childcare", "Providers_Geocoded.csv"))
+
+
+
+###### Reduction ratio #######
+#use actual subsidy enrollment and calculate reduciton ratio to match daily targets
+
+#Import Targets for updated year (get this from TWC Website)
+board.targets <- board.targets %>% 
+  reshape::rename(c("Board Number" = "TWC.Board.Number",
+                    "BCY22 Target" = "dailytarget")) %>% 
+  select('Board Name', TWC.Board.Number, dailytarget) 
+
+
+##subsidy enrollment/capacity
+
+twc_sum <- providers %>% 
+  group_by(TWC.Board.Number) %>% 
+  mutate(DailyAvg_sub = as.numeric(DailyAvg_sub)) %>% 
+  summarise(subsidy_cap = sum(Capacity[subsidy == 1], na.rm =T),
+            subsidy.cnt = sum(DailyAvg_sub, na.rm = T)) %>%  
+  left_join(., board.targets, by= "TWC.Board.Number") %>% 
+mutate(
+    reduction_ratio1 = dailytarget / subsidy_cap, #Old method: reduce capacity
+    reduction_ratio = dailytarget / subsidy.cnt #New Method: reduce enrollment counts
+    ) %>%   
+  select(-subsidy.cnt, -`Board Name`)  
+###
+
+providers <- left_join(providers, twc_sum, by = "TWC.Board.Number")
+
+providers <- providers %>% 
+  mutate(
+    DailyAvg_sub = as.numeric(DailyAvg_sub),
+    capacity_target_sub = ifelse(subsidy==1, round(DailyAvg_sub * reduction_ratio), NA),
+    capacity_target_trs_all = ifelse(trs_all==1, round(DailyAvg_sub * reduction_ratio), NA),
+    capacity_target_trs4 = ifelse(trs_4==1, round(DailyAvg_sub * reduction_ratio), NA),
+    
+    capacity_target_sub.old = ifelse(subsidy==1, round(Capacity * reduction_ratio1), NA),
+    capacity_target_trs_all.old = ifelse(trs_all==1, round(Capacity * reduction_ratio1), NA),
+    capacity_target_trs4.old = ifelse(trs_4==1, round(Capacity * reduction_ratio1), NA)) 
+
+```
+
+```{r}
+
+####Still need to clean up and do outputs
+#Export providers ######
+
+providers1 <- unique(providers)
+#export and manually check geographic duplicates
+write_csv(providers1, here("provider_data", "provider_dup_check.csv"))
+#read in manually checked providers
+providers <- read_csv(here("provider_data", "provider_dup_checked.csv"))
+
+write.csv(providers, file=here("Data for Jeff", "providers_15k_050222.csv"), row.names = F)
+
+providers_tosend <- providers %>% 
+  select(-c(`Operation #`, 
+            "capacity_target_sub.old", 
+            "capacity_target_trs_all.old",
+            "capacity_target_trs4.old", 
+           "NECPA", "NAFCC", "COA", "QELS", #"naeyc"
+           ))  #%>% 
+  select(providers, -ccdollars, -urban.rural, -Operation.., -dup,
+                           -capacity_target_sub.old, -capacity_target_trs_all.old, 
+                           -capacity_target_trs4.old, -SACS, -Montessori, -AMI, -ASCI,
+                           -NECPA, -NAFCC, -COA, -QELS)
+                           
+write.csv(providers_tosend, here("Data for Jeff", "providers_15k_050222_tosend.csv"), row.names = F)
+###
+
+
+
+#Supply providers: drop those with only school-aged children
+providers.all <- providers
+
+providers <- providers %>%  #This is now the SUPPLY providers dataset
+  filter(Infant=="Y" | Toddler=="Y" | Preschool=="Y")
+
+write_csv(providers, here("Data for Jeff", "providers_13k_noschage_050222.csv"))
+
+
+
+########### PREPARE ZCTA CROSSWALK ######################
+#Drop zips and zctas not in Texas
+zip_to_zcta <- zip_to_zcta_2018 %>% 
+  select(ZIP_CODE, STATE, ZCTA) %>% 
+  mutate(ZIP_CODE = as.numeric(ZIP_CODE)) %>% 
+  reshape::rename(c(ZIP_CODE="Zip"))
+
+
+
+##### Provider ZCTA ######
+#Merge crosswalk 
+providers <- left_join(providers, zip_to_zcta, by = "Zip")
+
+#providers<-providers %>% 
+#  reshape::rename(c(ZCTA.x = "ZCTA"))
+
+#Aggregate provider count up to ZCTA_USE
+### NEW STEP: USE "capacity_licensed" and "capacity_target_sub" and "capacity_target_trs_all" and "capacity_target_trs4"
+provider_zcta <- providers %>%
+  group_by(ZCTA) %>%
+  summarise(raw_capacity = sum(Capacity),
+            subsidy_capacity = sum(capacity_target_sub, na.rm=T),
+            q_2more_capacity = sum(capacity_target_trs_all, na.rm=T),
+            q_4_capacity = sum(capacity_target_trs4, na.rm=T),
+            subsidy_full_capacity = sum(Capacity[subsidy==1], na.rm=T),
+            trs_full_capacity = sum(Capacity[trs_all==1], na.rm=T)
+  ) %>% 
+  mutate(ZCTA = as.numeric(ZCTA))
+#####
+
+
+############# DEMAND data clean ###################
+
+
+## PULLED THIS FROM TIDY CENSUS in ACS script:
+##AF63E004:    Under 6 years: Living with two parents: Both parents in labor force,  AF63E010:    Under 6 years: Living with one parent: Living with father: In labor force, AF63E013:    Under 6 years: Living with one parent: Living with mother: In labor force
+## AGKFE002:    Under 6 years, AGKFE003:    Under 6 years: Under .50, AGKFE004:    Under 6 years: .50 to .74, AGKFE005:    Under 6 years: .75 to .99, AGKFE006:    Under 6 years: 1.00 to 1.24, AGKFE007:    Under 6 years: 1.25 to 1.49, AGKFE008:    Under 6 years: 1.50 to 1.74, AGKFE009:    Under 6 years: 1.75 to 1.84, AGKFE010:    Under 6 years: 1.85 to 1.99
+
+
+###### HS & PK data #######
+
+#Headstart
+headstart <- read_csv(here("Childcare", "headstart_providers21.csv")) %>% 
+  mutate(
+    Zip = ZIP) %>% 
+  left_join(., zip_to_zcta, by = "Zip") %>% 
+  mutate(ZCTA = as.numeric(ZCTA)) %>% 
+  group_by(ZCTA) %>% 
+  summarise(
+    hs_capacity = sum(`Total Slots`, na.rm=TRUE)
+  ) %>% 
+  select(ZCTA, hs_capacity)
+
+
+#Pre-K: generate prek dataset
+#update
+prek <- read_xlsx(here("Childcare", "Campus (1).xlsx")) %>% 
+  mutate(prek_count = `Campus\r\n2021 Student\r\nMembership:\r\nPK Count` + `Campus\r\n2021 Student\r\nMembership:\r\nEE Count`,
+         prek_ecodis = prek_count * (`Campus\r\n2021 Student\r\nMembership:\r\nEcon Disadv\r\nPercent`/100),
+         School.ID = as.numeric(`9 Digit\r\nCampus\r\nNumber`)) %>% 
+  filter(prek_count>0) %>% 
+  select(School.ID, `Campus\r\nName`, prek_count, prek_ecodis)
+
+#Add prek Zips
+prek_zips <- read_csv(here("prek", "2019CampusAddresses_MASTERsm.csv")) %>% 
+  mutate(School.ID = as.numeric(CAMPUS)) %>% 
+  select(School.ID, ZIP)
+
+prek <- left_join(prek, prek_zips, by = "School.ID")
+
+#manually fix zips that don't match ###### NEED TO INVESTIGATE 
+#write_csv(prek, here("prek", "manual_match.csv")) 
+
+prek <- read_csv(here("Childcare", "manual_matched.csv")) %>% 
+  reshape::rename(c(ZIP = "Zip"))%>% 
+  mutate(Zip = ifelse((Zip==76303), 76302, Zip),
+         Zip = ifelse((Zip==76813), 78613, Zip),
+         Zip = ifelse((Zip==770012), 77012, Zip)) 
+
+
+prek1 <- left_join(prek, zip_to_zcta, by = "Zip") %>% 
+  mutate(ZCTA = as.numeric(ZCTA)) %>% 
+    group_by(ZCTA) %>% 
+  summarise(
+    prek_total = sum(prek_count, na.rm=TRUE),
+    prek_poor = sum(prek_ecodis, na.rm=TRUE)
+  ) %>% 
+  select(ZCTA, prek_total, prek_poor) 
+
+
+
+
+
+
+#######
+
+##### Demand final #####
+#MERGE with Demand and remove
+demand_zcta <- left_join(work_pov_zcta, headstart, by = "ZCTA") %>% 
+  left_join(., prek1, by="ZCTA") %>% 
+  mutate(
+    hs_capacity = ifelse(is.na(hs_capacity), 0, hs_capacity),
+    prek_total = ifelse(is.na(prek_total), 0, prek_total),
+    prek_poor = ifelse(is.na(prek_poor), 0, prek_poor),
+    
+    workpar_all_raw = workpar,
+    work_par_poor_raw = round(workpar_pov),
+    
+    workpar_all_neg = workpar - hs_capacity - prek_total,
+    work_par_poor_neg = round(workpar_pov - hs_capacity - prek_poor),
+    
+    #Fix negatives & MISS to =0
+    workpar_all = ifelse(workpar_all_neg<0, 0, workpar_all_neg),
+    work_par_poor = ifelse(work_par_poor_neg<0, 0, work_par_poor_neg)
+    
+  ) %>% 
+  select(ZCTA, workpar_all, work_par_poor, hs_capacity, prek_total, prek_poor, workpar_all_raw, work_par_poor_raw,
+         workpar_all_neg, work_par_poor_neg)
+
+
+
+############### Supply & Demand ####################   
+merged_file <- left_join(demand_zcta, provider_zcta, by = "ZCTA") %>%
+  mutate(
+    raw_capacity = ifelse(is.na(raw_capacity),0,raw_capacity),
+    subsidy_capacity = ifelse(is.na(subsidy_capacity), 0, subsidy_capacity),
+    q_2more_capacity = ifelse(is.na(q_2more_capacity),0,q_2more_capacity),
+    q_4_capacity = ifelse(is.na(q_4_capacity),0,q_4_capacity)
+  ) %>%
+  mutate(
+    raw_capacity_new = raw_capacity - hs_capacity,
+    raw_capacity = ifelse(raw_capacity_new<0, 0, raw_capacity_new)   #THIS IS WHERE YOU REMOVE HS FROM SUPPLY
+  ) %>% 
+  select(ZCTA, raw_capacity, subsidy_capacity, q_2more_capacity,
+         q_4_capacity, 
+         workpar_all, work_par_poor,
+         hs_capacity, prek_total, prek_poor, workpar_all_raw, work_par_poor_raw,
+         subsidy_full_capacity, trs_full_capacity,
+         workpar_all_neg, work_par_poor_neg)
+
+rm(headstart, prek, provider_zcta, work_pov_zcta, zip_to_zcta, demand_zcta)
+
+
+
+
+
+#### Desert indices #######
+#childcare desert (reversed): demand over supply (similar to American Progress)
+merged_file <- merged_file %>%
+  mutate(
+    demandratio_raw = ifelse(raw_capacity==0, NA, 
+                            (workpar_all / raw_capacity)),
+    
+    demandratio_sub = ifelse(subsidy_capacity==0, NA, 
+                             (work_par_poor / subsidy_capacity)),
+    
+    demandratio_trs234 = ifelse(q_2more_capacity==0, NA, 
+                                (work_par_poor / q_2more_capacity)),
+    
+    demandratio_trs4 = ifelse(q_4_capacity==0, NA, 
+                              (work_par_poor / q_4_capacity))
+  ) %>%
+  mutate(   #childcare desert binary (1 = desert); AP definition, modified
+    raw_desert_01 = ifelse((workpar_all>30 & demandratio_raw > 3) | 
+                             (workpar_all>30 & raw_capacity == 0), 1, 0),
+    
+    sub_desert_01 = ifelse((work_par_poor>30 & demandratio_sub > 3) | 
+                             (work_par_poor>30 & subsidy_capacity == 0), 1, 0),
+    
+    trs234_desert_01 = ifelse((work_par_poor>30 & demandratio_trs234 > 3) | 
+                                (work_par_poor>30 & q_2more_capacity == 0), 1, 0),
+    
+    trs4_desert_01 = ifelse((work_par_poor>30 & demandratio_trs4 > 3) | 
+                              (work_par_poor>30 & q_4_capacity == 0), 1, 0)
+  ) %>%
+  mutate(
+    desert_rate_raw = ifelse(raw_desert_01==0, NA, 
+                             ((raw_capacity / workpar_all)*100)),
+    
+    desert_rate_sub = ifelse(sub_desert_01==0, NA, 
+                             ((subsidy_capacity / work_par_poor)*100)),
+    
+    desert_rate_trs234 = ifelse(trs234_desert_01==0, NA, 
+                                ((q_2more_capacity / work_par_poor)*100)),
+    
+    desert_rate_trs4 = ifelse(trs4_desert_01==0, NA, 
+                            ((q_4_capacity / work_par_poor)*100))
+  ) %>%
+  mutate(
+    desert_level_raw = ifelse(raw_desert_01==0 & workpar_all<=30, "Not a desert (too few children)",
+                              ifelse(raw_desert_01==0 & workpar_all>30, "Not a desert (33+ seats per hundred)",
+                              ifelse(desert_rate_raw>=0 & desert_rate_raw<5, "0-5 per hundred",
+                                     ifelse(desert_rate_raw>=5 & desert_rate_raw<15, "5-15 per hundred",
+                                            ifelse(desert_rate_raw>=15 & desert_rate_raw<25, "15-25 per hundred",
+                                                   ifelse(desert_rate_raw>=25 & desert_rate_raw<34, "25-33 per hundred",
+                                                          NA)))))),
+    
+    desert_level_sub = ifelse(sub_desert_01==0 & work_par_poor<=30, "Not a desert (too few children)",
+                              ifelse(sub_desert_01==0 & work_par_poor>30, "Not a desert (33+ seats per hundred)",
+                              ifelse(desert_rate_sub>=0 & desert_rate_sub<5, "0-5 per hundred",
+                                     ifelse(desert_rate_sub>=5 & desert_rate_sub<15, "5-15 per hundred",
+                                            ifelse(desert_rate_sub>=15 & desert_rate_sub<25, "15-25 per hundred",
+                                                   ifelse(desert_rate_sub>=25 & desert_rate_sub<34, "25-33 per hundred",
+                                                          NA)))))), 
+    
+    desert_level_trs234 = ifelse(trs234_desert_01==0 & work_par_poor<=30, "Not a desert (too few children)",
+                                 ifelse(trs234_desert_01==0 & work_par_poor>30, "Not a desert (supply meets 33%+ of demand)",
+                                 ifelse(desert_rate_trs234>=0 & desert_rate_trs234<5, "0-5 per hundred",
+                                        ifelse(desert_rate_trs234>=5 & desert_rate_trs234<15, "5-15 per hundred",
+                                               ifelse(desert_rate_trs234>=15 & desert_rate_trs234<25, "15-25 per hundred",
+                                                      ifelse(desert_rate_trs234>=25 & desert_rate_trs234<34, "25-33 per hundred",
+                                                             NA)))))), 
+    
+    desert_level_trs4 = ifelse(trs4_desert_01==0 & work_par_poor<=30, "Not a desert (too few children)",
+                               ifelse(trs4_desert_01==0 & work_par_poor>30, "Not a desert (supply meets 33%+ of demand)",
+                               ifelse(desert_rate_trs4>=0 & desert_rate_trs4<5, "0-5 per hundred",
+                                      ifelse(desert_rate_trs4>=5 & desert_rate_trs4<15, "5-15 per hundred",
+                                             ifelse(desert_rate_trs4>=15 & desert_rate_trs4<25, "15-25 per hundred",
+                                                    ifelse(desert_rate_trs4>=25 & desert_rate_trs4<34, "25-33 per hundred",
+                                                           NA))))))
+  ) %>% 
+  mutate(
+    desert_rate_raw = ifelse(raw_desert_01==0 & workpar_all<=30, "Not a desert (too few children)", 
+                             ifelse(raw_desert_01==0 & workpar_all>30, "Not a desert (supply meets 33%+ of demand)",
+                                    ((raw_capacity / workpar_all)*100))),
+    
+    desert_rate_sub = ifelse(sub_desert_01==0 & work_par_poor<=30, "Not a desert (too few children)",
+                              ifelse(sub_desert_01==0 & work_par_poor>30, "Not a desert (supply meets 33%+ of demand)",
+                                     ((subsidy_capacity / work_par_poor)*100))),
+    
+    desert_rate_trs234 = ifelse(trs234_desert_01==0 & work_par_poor<=30, "Not a desert (too few children)",
+                                ifelse(trs234_desert_01==0 & work_par_poor>30, "Not a desert (supply meets 33%+ of demand)",
+                                       ((q_2more_capacity / work_par_poor)*100))),
+    
+    desert_rate_trs4 = ifelse(trs4_desert_01==0 & work_par_poor<=30, "Not a desert (too few children)",
+                              ifelse(trs4_desert_01==0 & work_par_poor>30, "Not a desert (supply meets 33%+ of demand)",
+                                     ((q_4_capacity / work_par_poor)*100)))
+  )
+
+
+
+
+
+tabyl(merged_file, desert_level_raw)
+
+# desert_level_raw                           n        percent
+#0-5 per hundred                             359     0.18552972
+#15-25 per hundred                           109     0.05633075
+#25-33 per hundred                           91      0.04702842
+#5-15 per hundred                            76      0.03927649
+#Not a desert (33+ seats per hundred)        700     0.36175711
+#Not a desert (too few children)             600     0.31007752
+
+###last year distribution with notes about 2nd prior year:
+# desert_level_raw                      n    percent
+# 0-5 per hundred                     204    0.10542636   (Decrease from last year - 226) 
+# 15-25 per hundred                   65     0.03359173   (Increase from last year - 54)
+# 25-33 per hundred                   64     0.03307494   (Same # as last year)
+# 5-15 per hundred                    49     0.02532300   (Same # as last year)
+# Not a desert (33+ seats per hundred)889    0.45943152   (Decrease from last year - 914)
+# Not a desert (too few children)     664    0.34315245   (Increase from last year - 628)
+
+tabyl(merged_file, desert_level_trs4)
+
+# desert_level_trs4                   n       percent
+# 0-5 per hundred                    664    0.34315245
+# 15-25 per hundred                  76     0.03927649
+# 25-33 per hundred                  31     0.01602067
+# 5-15 per hundred                   123    0.06356589
+# Not a desert                       77     0.03979328
+# (supply meets 33%+ of demand)
+# Not a desert (too few children)    964    0.49819121
+
+###last year distribution with notes about 2nd prior year:
+#desert_level_trs4                            n    percent
+#0-5 per hundred                             578   0.29870801  (decrease from last year - 729)
+#15-25 per hundred                           63    0.03255814  (decrease from last year - 70)
+#25-33 per hundred                           38    0.01963824  (Increase from last year - 22)
+#5-15 per hundred                            149   0.07700258  (decrease from last year - 151)
+#Not a desert (supply meets 33%+ of demand)   85   0.04392765  (Increase from last year - 42)
+#Not a desert (too few children)             1022  0.52816537  (Increase from last year - 921)
+
+#Check against old files
+merged_file_old <- read_csv(here("Data for Jeff" , "OLD", "final_data_zcta_060320_tosend.csv"))
+tabyl(merged_file_old, desert_level_raw)
+tabyl(merged_file_old, desert_level_trs4)
+#add notes above
+
+final <- merged_file %>% 
+  select(-demandratio_raw, -demandratio_sub, -demandratio_trs234, -demandratio_trs4
+         )
+
+write.csv(merged_file, file = here("Data for Jeff/data_zcta_050222.csv"),
+          row.names=FALSE)
+
+
+tosend <- merged_file %>% 
+  select(-workpar_all_raw, -work_par_poor_raw, -hs_capacity, -prek_total, -prek_poor,
+         -workpar_all_neg, -work_par_poor_neg)
+
+write.csv(tosend, file = here("Data for Jeff/data_zcta_050222_tosend.csv"),
+          row.names=FALSE)
+
+
+#update longitudinal data set using last year's data as a base:
+
+longitudinal <- read_csv(here("longitudinal", "ccd_longitudinal.csv"))
+
+annual <- tosend %>% 
+  mutate(Year = "2021") %>% 
+# note - longitudinal data shows actual year data was collected/recorded not release year
+select(Year,	ZCTA,	raw_capacity,	subsidy_capacity,	q_2more_capacity,	q_4_capacity,	workpar_all,	
+       work_par_poor,	subsidy_full_capacity,	trs_full_capacity,	demandratio_raw,	demandratio_sub,	
+       demandratio_trs234,	demandratio_trs4,	raw_desert_01,	sub_desert_01,	trs234_desert_01,	
+       trs4_desert_01,	desert_rate_raw,	desert_rate_sub,	desert_rate_trs234,	desert_rate_trs4,	
+       desert_level_raw,	desert_level_sub,	desert_level_trs234,	desert_level_trs4)
+
+#stack it
+longitudinal_tosend <- rbind(longitudinal, annual)
+
+write_csv(longitudinal_tosend, here("Data for Jeff", "longitudinal_tosend_050322.csv"))
+
+
+#### Start LWB Visuals: 
+providerstosend <- read.csv(here("Data for Jeff", "providers_15k_050222_tosend.csv"))
+tomerge <- read.csv(here("Data for Jeff", "data_zcta_050222_tosend.csv")) %>% 
+  mutate(Zip = as.integer(ZCTA))  %>% 
+  select(Zip, "workpar_all",  "work_par_poor", "subsidy_full_capacity", "trs_full_capacity",
+         "raw_desert_01", "sub_desert_01", "trs234_desert_01", "trs4_desert_01")
+
+LWB <- left_join(providerstosend, tomerge, by = "Zip") %>% 
+  mutate(poor_subdesert_children = ifelse(sub_desert_01 == 1, `work_par_poor`, 0),
+         poor_trsdesert_children = ifelse(trs234_desert_01 == 1, `work_par_poor`, 0))
+
+
+Texas_check <- LWB %>%
+  filter(raw_desert_01 == 1) %>% 
+summarise(work_par_poor = sum(work_par_poor),
+          workpar_all = sum(workpar_all))
+
+Texas_check1 <- LWB %>%
+  summarise(work_par_poor = sum(work_par_poor, na.rm = TRUE),
+            workpar_all = sum(workpar_all, na.rm = TRUE))
+
+LWB_sums <- LWB %>% 
+  #filter()
+  group_by(TWC.Board.Name) %>%
+  summarise(poor_supdesert_children = sum(poor_subdesert_children, na.rm = TRUE),
+            poor_trsdesert_children = sum(poor_trsdesert_children, na.rm = TRUE),
+            work_par_poor = sum(work_par_poor, na.rm = TRUE))
+            
+
+LWB_final <- LWB_sums %>% 
+  mutate(supdesert_pct = poor_supdesert_children/work_par_poor,
+         trsdesert_pct = poor_trsdesert_children/work_par_poor)
+
+Texas_sums <- LWB %>% 
+summarise(poor_supdesert_children = sum(poor_subdesert_children, na.rm = TRUE),
+          poor_trsdesert_children = sum(poor_trsdesert_children, na.rm = TRUE),
+          work_par_poor = sum(work_par_poor, na.rm = TRUE))%>% 
+  mutate(supdesert_pct = poor_supdesert_children/work_par_poor,
+         trsdesert_pct = poor_trsdesert_children/work_par_poor)
+
+
+county_sums <- LWB %>% 
+  group_by(County) %>%
+  summarise(poor_supdesert_children = sum(poor_subdesert_children, na.rm = TRUE),
+            poor_trsdesert_children = sum(poor_trsdesert_children, na.rm = TRUE),
+            work_par_poor = sum(work_par_poor, na.rm = TRUE))%>% 
+  mutate(supdesert_pct = poor_supdesert_children/work_par_poor, na.rm = TRUE,
+         trsdesert_pct = poor_trsdesert_children/work_par_poor, na.rm = TRUE)
+
+county_sums <- LWB %>% 
+  group_by(County) %>%
+  summarise(poor_supdesert_children = sum(poor_subdesert_children, na.rm = TRUE),
+            poor_trsdesert_children = sum(poor_trsdesert_children, na.rm = TRUE),
+            work_par_poor = sum(work_par_poor, na.rm = TRUE))
+COUNTY_SUMS <- county_sums %>% 
+  mutate(supdesert_pct = poor_supdesert_children/work_par_poor, na.rm = TRUE,
+         trsdesert_pct = poor_trsdesert_children/work_par_poor, na.rm = TRUE)
+
+
+
+write_csv(LWB_final, here("LWB_final_table.csv"))
+
+write_csv(COUNTY_SUMS, here("county_table.csv"))
+
+
+
+
+
+###############################
+
+# BELOW IS OLD - DO NOT USE
+
+###############################
+
+zcta.twc <- left_join(countyzcta, county_to_twc, by = "FIPS.Code") %>% 
+  mutate(ZCTA = as.numeric(ZCTA))
+
+countyzcta <- read_csv(here("ZCTA_to_county_crosswalk_countygroups.csv")) %>% 
+  mutate(FIPS.Code = as.numeric(County_code),
+         ZCTA = as.numeric(ZCTA5)) %>% 
+  select(ZCTA, FIPS.Code)
+
+zcta.twc <- left_join(countyzcta, county_to_twc, by = "FIPS.Code") %>% 
+  mutate(ZCTA = as.numeric(ZCTA))
+
+zcta.twc <- left_join(countyzcta, county_to_twc, by = "FIPS.Code") %>% 
+  mutate(ZCTA = as.numeric(ZCTA))
+
+tosend2 <- left_join(tosend, countyzcta, by = "ZCTA")
+
+countyall<- tosend2 %>%
+  filter(raw_desert_01 == 1) %>% 
+  filter(sub_desert_01 == 1) %>% 
+  filter(trs234_desert_01 == 1) %>% 
+  group_by(TWC.Board.Name) %>%
+  group_by(County) %>% 
+  summarise(raw_capacity = sum(raw_capacity),
+            subsidy_capacity = sum(subsidy_capacity),
+            #"q_2more_capacity",      "q_4_capacity"          
+            workpar_all = sum(workpar_all),          
+            work_par_poor = sum(work_par_poor),
+            subsidy_full_capacity = sum(subsidy_full_capacity),
+            trs_full_capacity = sum(trs_full_capacity),   
+            #demandratio_raw  demandratio_sub demandratio_trs234 "demandratio_trs4"      
+            raw_desert_01 = sum(raw_desert_01),
+            sub_desert_01 = sum(sub_desert_01),        
+            trs234_desert_01 = sum(trs234_desert_01), 
+            trs4_desert_01 = sum(trs4_desert_01))
+
+write_csv(tosend2, here("county_chart.csv"))
+county_all<- tosend2 %>%
+  filter(raw_desert_01 == 1) %>% 
+  #filter(sub_desert_01 == 1)
+  #filter(County == "Cameron" | County == "El Paso" | County == "Potter" | County == "Randall" | County == "Hidalgo" | County == "Harris" | County == "Lubbock" | County == "Tarrant" | County == "Bexar" | County =="Travis" | County == "Dallas")
+  #filter(trs234_desert_01 == 1) %>% 
+  #group_by(TWC.Board.Name) %>%
+  #group_by(County) %>% 
+  summarise(raw_capacity = sum(raw_capacity),
+            subsidy_capacity = sum(subsidy_capacity),
+            #"q_2more_capacity"      "q_4_capacity"          
+            workpar_all = sum(workpar_all),          
+            work_par_poor = sum(work_par_poor),
+            subsidy_full_capacity = sum(subsidy_full_capacity),
+            trs_full_capacity = sum(trs_full_capacity),   
+            #demandratio_raw  demandratio_sub demandratio_trs234 "demandratio_trs4"      
+            raw_desert_01 = sum(raw_desert_01),
+            sub_desert_01 = sum(sub_desert_01),        
+            trs234_desert_01 = sum(trs234_desert_01), 
+            trs4_desert_01 = sum(trs4_desert_01))
+
+sumtosend <- tosend2 %>% 
+  filter(sub_desert_01 == 1) %>% 
+  summarise(workpar_all = sum(workpar_all, na.rm = T),
+            work_par_poor = sum(work_par_poor, na.rm = T))
+
+hs_sum <- headstart %>% 
+  summarise(hs_capacity = sum(hs_capacity, na.rm = T))
+tabyl(headstart, hs_capacity)
+# 196,132 children under age 6 with working parents live in a child care desert.
+# 89,464 low income children under age 6 with working parents live in a child care desert (almost 1-in-5).
+ 
+# OLD ESTIMATE 196,291 children under age 6 with working parents live in a child care desert.
+# OLD ESTIMATE 89,623 low income children under age 6 with working parents live in a child care desert (almost 1-in-5).
+
+
+```
+
