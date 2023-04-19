@@ -313,7 +313,7 @@ Admin/Ops per Unit","Estimated Avg Provider Reimbursement Rate", "Presumed PSOC"
 data_table
 
 }
-results <- map_df(raw_text,clean_table1) #I am get stuck here and I don't know why-CT
+results <- map_df(raw_text,clean_table1) #I am stuck here and I don't know why-CT
 head(results)
 #___________________________
 board.targets <- read_xlsx(here("Childcare","Board Targets 2023.xlsx")) #Extract daily targets
