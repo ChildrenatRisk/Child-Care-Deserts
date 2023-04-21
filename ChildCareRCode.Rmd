@@ -288,7 +288,7 @@ library(ggplot2)
 
 ###### Provider clean #######
 url<- c("https://www.twc.texas.gov/files/twc/commission_meeting_materials_09.13.22_item16_bcy23_cc_targets.pdf")
-raw_text <- map(url,pdf_text)
+raw_text <- map(url, pdf_text)
 
 clean_table1<-function(raw) {
   #split the single pages 
@@ -303,18 +303,49 @@ clean_table1<-function(raw) {
   
   #Build the table and remove special characters
   table <- raw[(table_start):(table_end)]
-table <- str_replace_all(table,"\\s{2,}", "|")
-text_con <-textConnection(table)
-data_table <-read.csv(text_con, sep = "|")
+  table <- str_replace_all(table,"\\s{2,}", "|")
+  text_con <- textConnection(table)
+  data_table <- read.csv(text_con, sep = "|")
 
 #Create a list of column names
 colnames(data_table)<- c("Board Name","#","CY23 Base Allocation","4% Quality Allocation", "Amount Available to Operate the Subsidized CC Program", "Presumed Semi-Fixed Admin/Ops Set Aside","Supplemental Distribution","Available for Direct Care (DC) & Variable Admin/Ops","Variable
 Admin/Ops per Unit","Estimated Avg Provider Reimbursement Rate", "Presumed PSOC","System Cost Per Unit", "BCY23 Target")
 data_table
-
 }
-results <- map_df(raw_text,clean_table1) #I am stuck here and I don't know why-CT
+
+results <- map_df(raw_text, clean_table1) #I am stuck here and I don't know why-CT (see Amy's attempt below)
 head(results)
+
+
+
+# Amy's attempt:
+
+# download.file("https://www.twc.texas.gov/files/twc/commission_meeting_materials_09.13.22_item16_bcy23_cc_targets.pdf", "commission_meeting_materials_09.13.22_item16_bcy23_cc_targets.pdf", mode = "wb")
+
+raw_text <- pdf_text("https://www.twc.texas.gov/files/twc/commission_meeting_materials_09.13.22_item16_bcy23_cc_targets.pdf") 
+
+raw_table <- map(raw_text[3], ~ str_split(.x, "\\n") %>% unlist())
+
+#specify the start and end of the table data
+table_start <- raw_table[[1]] %>% 
+    str_which("Board Name")
+table_end <- raw_table[[1]] %>% 
+    str_which("Sum of Boards")
+
+#Build the table and remove special characters
+table <- raw_table[[1]][(table_start):(table_end)]
+table <- str_replace_all(table,"\\s{2,}", "|")
+text_con <- textConnection(table)
+data_table <- read.csv(text_con, sep = "|")
+  
+#Create a list of column names
+colnames(data_table)<- c("Board Name","#","CY23 Base Allocation","4% Quality Allocation", "Amount Available to Operate the Subsidized CC Program", "Presumed Semi-Fixed Admin/Ops Set Aside","Supplemental Distribution","Available for Direct Care (DC) & Variable Admin/Ops","Variable
+Admin/Ops per Unit","Estimated Avg Provider Reimbursement Rate", "Presumed PSOC","System Cost Per Unit", "BCY23 Target")
+
+view(data_table)
+
+
+
 #___________________________
 board.targets <- read_xlsx(here("Childcare","Board Targets 2023.xlsx")) #Extract daily targets
 
